@@ -1,0 +1,30 @@
+# Environments
+.venv/
+venv/
+env/
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Node (future dashboard)
+node_modules/
+
+# Build artifacts
+dist/
+build/

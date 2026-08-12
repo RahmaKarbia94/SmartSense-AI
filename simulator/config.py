@@ -10,3 +10,8 @@ HUMIDITY_MAX = 80.0
 
 PRESSURE_MIN = 950.0
 PRESSURE_MAX = 1050.0
+
+BROKER_HOST = "localhost"
+BROKER_PORT = 1883
+MQTT_TOPIC = f"smartsense/devices/{DEVICE_ID}/telemetry"
+MQTT_CLIENT_ID = f"{DEVICE_ID}_publisher"

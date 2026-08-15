@@ -104,8 +104,19 @@ created for repeated readings from the same device).
 }
 ```
 
-All fields are required. `timestamp` must be a valid ISO 8601
-datetime; `temperature`, `humidity`, `pressure` must be numeric.
+All fields are required. Validation rules (`app/schemas/telemetry.py`):
+
+- `timestamp` — valid ISO 8601 datetime, **must be UTC** (a naive
+  datetime or a non-UTC offset like `+02:00` is rejected).
+- `temperature` — numeric, must be between -50.0 and 60.0 °C.
+- `humidity` — numeric, must be between 0.0 and 100.0 %.
+- `pressure` — numeric, must be between 800.0 and 1100.0 hPa.
+
+These ranges are intentionally wider than the simulator's own
+generation range (18-35 °C / 30-80 % / 950-1050 hPa) — they exist to
+catch clearly bad or faulty sensor data (e.g. a stuck or
+disconnected sensor), not to constrain what any real device could
+legitimately report.
 
 ### Database Schema
 
@@ -119,7 +130,7 @@ datetime; `temperature`, `humidity`, `pressure` must be numeric.
 | Method | Path                                   | Description                          |
 |--------|-----------------------------------------|----------------------------------------|
 | GET    | `/`                                     | Service status                         |
-| GET    | `/health`                               | Health check                           |
+| GET    | `/health`                               | Health check — reports app and database connectivity status |
 | GET    | `/docs`                                 | Interactive API docs (Swagger)         |
 | GET    | `/openapi.json`                         | OpenAPI schema                         |
 | GET    | `/api/v1/devices`                       | List registered devices                |
@@ -129,6 +140,47 @@ datetime; `temperature`, `humidity`, `pressure` must be numeric.
 
 Telemetry history pagination: `limit` (1-500, default 50), `offset`
 (>= 0, default 0). Invalid values return `422`.
+
+
+## Complete Data Flow
+
+Python Simulator
+|
+| MQTT publish
+v
+Mosquitto (localhost:1883)
+|
+| MQTT subscribe (wildcard topic)
+v
+FastAPI MQTT Consumer --- decode UTF-8, parse JSON
+|
+| validate (required fields, types, sensor ranges, UTC timestamp)
+v
+Telemetry Service --- get-or-create device, insert reading
+|
+v
+PostgreSQL
+|
+| REST API (/api/v1/*)
+v
+React Dashboard
+
+
+Every stage fails safely and independently:
+
+- **Malformed MQTT payloads** (invalid JSON, missing fields, wrong
+  types, out-of-range values, non-UTC timestamps) are logged and
+  dropped by the MQTT consumer — the backend keeps running and keeps
+  processing subsequent messages.
+- **Database failures** (PostgreSQL down, connection dropped) are
+  caught in the telemetry service, logged, and the backend resumes
+  storing telemetry automatically once PostgreSQL is reachable again
+  — no manual restart needed.
+- **`GET /health`** reports live status: `{"status": "ok",
+  "database": "connected"}` when everything is healthy, or
+  `{"status": "degraded", "database": "unreachable"}` if PostgreSQL
+  can't be reached — the endpoint itself never crashes even when the
+  database is down.
 
 ## Running Tests
 

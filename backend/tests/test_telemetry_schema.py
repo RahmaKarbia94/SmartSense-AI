@@ -46,3 +46,57 @@ def test_empty_device_id_raises():
             humidity=52.18,
             pressure=1014.27,
         )
+
+def test_temperature_out_of_range_raises():
+    with pytest.raises(ValidationError):
+        TelemetryReading(
+            device_id="simulator_001",
+            timestamp="2026-08-12T23:00:00+00:00",
+            temperature=999.0,
+            humidity=52.18,
+            pressure=1014.27,
+        )
+
+
+def test_humidity_out_of_range_raises():
+    with pytest.raises(ValidationError):
+        TelemetryReading(
+            device_id="simulator_001",
+            timestamp="2026-08-12T23:00:00+00:00",
+            temperature=25.34,
+            humidity=150.0,
+            pressure=1014.27,
+        )
+
+
+def test_pressure_out_of_range_raises():
+    with pytest.raises(ValidationError):
+        TelemetryReading(
+            device_id="simulator_001",
+            timestamp="2026-08-12T23:00:00+00:00",
+            temperature=25.34,
+            humidity=52.18,
+            pressure=1.0,
+        )
+
+
+def test_naive_timestamp_raises():
+    with pytest.raises(ValidationError):
+        TelemetryReading(
+            device_id="simulator_001",
+            timestamp="2026-08-12T23:00:00",
+            temperature=25.34,
+            humidity=52.18,
+            pressure=1014.27,
+        )
+
+
+def test_non_utc_timezone_raises():
+    with pytest.raises(ValidationError):
+        TelemetryReading(
+            device_id="simulator_001",
+            timestamp="2026-08-12T23:00:00+02:00",
+            temperature=25.34,
+            humidity=52.18,
+            pressure=1014.27,
+        )        

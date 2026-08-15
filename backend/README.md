@@ -2,14 +2,14 @@
 
 FastAPI backend for SmartSense AI. Connects to the MQTT broker,
 subscribes to device telemetry, validates incoming payloads, and
-passes valid readings to a service layer. Database persistence is
-not implemented yet.
+persists valid readings to PostgreSQL.
 
 ## Requirements
 
 - Python 3.12+
 - A running MQTT broker (developed and tested against Mosquitto 2.1.2
   at `localhost:1883`)
+- PostgreSQL (developed and tested against PostgreSQL 18)
 
 ## Setup
 
@@ -21,26 +21,55 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+### Database
+
+Create a local development database:
+
+```bash
+psql -U postgres -c "CREATE DATABASE smartsense_dev;"
+```
+
+Copy `.env.example` to `.env` and set your real `DATABASE_URL`
+(never commit `.env`):
+DATABASE_URL=postgresql://postgres:<your_password>@localhost:5432/smartsense_dev
+Apply migrations to create the schema:
+
+```bash
+alembic upgrade head
+```
+
 ## Configuration
 
-Configuration is read from environment variables (see `app/config.py`),
-with local defaults if unset:
+Configuration is read from environment variables (see `app/config.py`,
+loaded automatically from `.env` via `python-dotenv`):
 
-| Variable         | Default                              | Description                                |
-|------------------|----------------------------------------|----------------------------------------------|
-| `APP_ENV`        | `development`                          | Application environment                       |
-| `DATABASE_URL`   | (empty)                                | Reserved for future PostgreSQL connection     |
-| `MQTT_HOST`      | `localhost`                            | MQTT broker hostname                          |
-| `MQTT_PORT`      | `1883`                                 | MQTT broker port                              |
-| `MQTT_TOPIC`     | `smartsense/devices/+/telemetry`       | Wildcard subscription — matches any device_id |
-| `MQTT_CLIENT_ID` | `smartsense_backend_subscriber`        | MQTT client ID                                |
-
-`DATABASE_URL` is not used yet — the backend does not connect to
-PostgreSQL in this version.
+| Variable         | Default                              | Description                                   |
+|------------------|---------------------------------------|------------------------------------------------|
+| `APP_ENV`        | `development`                        | Application environment                         |
+| `DATABASE_URL`   | (empty)                              | PostgreSQL connection string                    |
+| `MQTT_HOST`      | `localhost`                          | MQTT broker hostname                            |
+| `MQTT_PORT`      | `1883`                               | MQTT broker port                                |
+| `MQTT_TOPIC`     | `smartsense/devices/+/telemetry`     | Wildcard subscription — matches any device_id   |
+| `MQTT_CLIENT_ID` | `smartsense_backend_subscriber`      | MQTT client ID                                  |
 
 The `+` wildcard in `MQTT_TOPIC` matches any single topic level, so the
 backend receives telemetry from any device (e.g. `simulator_001`,
 `esp32_001`) without code changes.
+
+## Database Migrations
+
+Migrations are managed with Alembic (`backend/alembic/`).
+
+```bash
+# Apply all pending migrations
+alembic upgrade head
+
+# Create a new migration after changing models
+alembic revision --autogenerate -m "description of change"
+
+# Roll back the last migration
+alembic downgrade -1
+```
 
 ## Running the Server
 
@@ -52,12 +81,16 @@ Server starts at `http://127.0.0.1:8000`. On startup, the backend
 connects to the MQTT broker and subscribes to the telemetry topic. On
 shutdown, it disconnects cleanly.
 
-## MQTT Ingestion
+## MQTT Ingestion & Persistence
 
 Incoming messages go through:
+MQTT message -> decode UTF-8 -> parse JSON -> validate schema -> telemetry service -> PostgreSQL
+Each stage fails safely — invalid payloads and database failures are
+logged and the message is dropped; the application never crashes.
 
-Each stage fails safely — invalid payloads are logged and dropped, the
-application never crashes on malformed data.
+When telemetry arrives for a device not yet seen, a `devices` row is
+created automatically (`device_id` is unique — no duplicates are
+created for repeated readings from the same device).
 
 ### Telemetry Schema
 
@@ -74,8 +107,12 @@ application never crashes on malformed data.
 All fields are required. `timestamp` must be a valid ISO 8601
 datetime; `temperature`, `humidity`, `pressure` must be numeric.
 
-Currently, valid telemetry is logged by the service layer only
-(`app/services/telemetry_service.py`) — no persistence yet.
+### Database Schema
+
+- `devices`: `id` (PK), `device_id` (unique), `created_at`
+- `telemetry`: `id` (PK), `device_pk` (FK -> `devices.id`), `timestamp`
+  (when the reading was generated), `temperature`, `humidity`,
+  `pressure`, `created_at` (when the row was inserted)
 
 ## Available Endpoints
 
@@ -92,14 +129,22 @@ Currently, valid telemetry is logged by the service layer only
 python -m pytest tests/ -v
 ```
 
-## Verifying Telemetry Reception
+Database-layer tests use an in-memory SQLite database — they never
+touch your local PostgreSQL data.
 
-1. Ensure Mosquitto is running on `localhost:1883`.
-2. Start the backend: `uvicorn app.main:app --reload`
+## Verifying Stored Telemetry
+
+1. Ensure PostgreSQL and Mosquitto are both running, and migrations
+   are applied (`alembic upgrade head`).
+2. Start the backend: `uvicorn app.main:app`
 3. Start the simulator (`simulator/main.py`) in a separate terminal.
 4. Watch the backend logs for lines like:
-   `Telemetry received: device=simulator_001 temp=25.34 ...`
-5. To test invalid-payload handling, publish a malformed message (e.g.
-   invalid JSON, or JSON missing a required field) to
-   `smartsense/devices/<any_id>/telemetry` via MQTT Explorer's Publish
-   panel — the backend logs an error and keeps running.
+   `Stored telemetry: device=simulator_001 temp=25.34 ...`
+5. Inspect the database directly:
+```bash
+   psql -U postgres -d smartsense_dev -c "SELECT * FROM devices;"
+   psql -U postgres -d smartsense_dev -c "SELECT * FROM telemetry ORDER BY id DESC LIMIT 5;"
+```
+6. To test failure handling, stop PostgreSQL while the backend is
+   running — it logs database errors and resumes storing telemetry
+   automatically once PostgreSQL is available again.

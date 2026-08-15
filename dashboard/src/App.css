@@ -82,3 +82,66 @@
 .error-state {
   color: #e57373;
 }
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 2rem;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  border: 1px solid #333;
+  border-radius: 8px;
+}
+
+.summary-card__label {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.summary-card__value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.time-range-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.time-range-selector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.time-range-selector button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.time-range-selector__button--active {
+  background: #333;
+  font-weight: 600;
+}
+
+.chart-block {
+  margin-bottom: 1.5rem;
+}
+
+.chart-block h4 {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  opacity: 0.85;
+}

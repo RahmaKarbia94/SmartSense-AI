@@ -116,12 +116,19 @@ datetime; `temperature`, `humidity`, `pressure` must be numeric.
 
 ## Available Endpoints
 
-| Method | Path            | Description                     |
-|--------|-----------------|----------------------------------|
-| GET    | `/`             | Service status                   |
-| GET    | `/health`       | Health check                     |
-| GET    | `/docs`         | Interactive API docs (Swagger)   |
-| GET    | `/openapi.json` | OpenAPI schema                   |
+| Method | Path                                   | Description                          |
+|--------|-----------------------------------------|----------------------------------------|
+| GET    | `/`                                     | Service status                         |
+| GET    | `/health`                               | Health check                           |
+| GET    | `/docs`                                 | Interactive API docs (Swagger)         |
+| GET    | `/openapi.json`                         | OpenAPI schema                         |
+| GET    | `/api/v1/devices`                       | List registered devices                |
+| GET    | `/api/v1/devices/{device_id}`           | Get one device (404 if not found)      |
+| GET    | `/api/v1/devices/{device_id}/telemetry` | Telemetry history, newest first, paginated (`limit`, `offset`) |
+| GET    | `/api/v1/telemetry/latest`              | Latest reading for each device         |
+
+Telemetry history pagination: `limit` (1-500, default 50), `offset`
+(>= 0, default 0). Invalid values return `422`.
 
 ## Running Tests
 

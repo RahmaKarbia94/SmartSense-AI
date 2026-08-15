@@ -12,3 +12,10 @@ def get_or_create_device(db: Session, device_id: str) -> Device:
     db.add(device)
     db.flush()
     return device
+
+def list_devices(db: Session):
+    return db.query(Device).order_by(Device.device_id).all()
+
+
+def get_device_by_device_id(db: Session, device_id: str):
+    return db.query(Device).filter(Device.device_id == device_id).first()

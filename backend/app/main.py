@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.routes import router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.telemetry import router as telemetry_router
@@ -29,6 +31,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SmartSense AI Backend", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
+
 app.include_router(router)
 app.include_router(devices_router)
 app.include_router(telemetry_router)

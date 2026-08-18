@@ -24,6 +24,7 @@ from app.config import DATABASE_URL
 from app.db.session import Base
 from app.models.device import Device
 from app.models.telemetry import Telemetry
+from app.models.anomaly import AnomalyResult
 
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", DATABASE_URL)

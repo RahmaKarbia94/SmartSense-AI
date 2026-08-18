@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.schemas.anomaly import AnomalyResultResponse
 from app.schemas.device import DeviceResponse
 from app.schemas.telemetry_response import TelemetryResponse
+from app.services.anomaly_service import get_anomalies
 from app.services.device_service import get_all_devices, get_device
 from app.services.telemetry_query_service import get_device_telemetry
 
@@ -34,3 +36,12 @@ def get_device_telemetry_endpoint(
     if readings is None:
         raise HTTPException(status_code=404, detail="Device not found")
     return readings
+
+
+
+@router.get("/{device_id}/anomalies", response_model=list[AnomalyResultResponse])
+def get_device_anomalies_endpoint(device_id: str, db: Session = Depends(get_db)):
+    results = get_anomalies(db, device_id)
+    if results is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return results

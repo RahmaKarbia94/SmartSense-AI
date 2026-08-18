@@ -21,6 +21,11 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+`requirements.txt` includes `-e ../ai`, which installs the `ai/`
+package (see `ai/README.md`) as an editable local dependency — the
+backend reuses its preprocessing and model code directly rather than
+duplicating it.
+
 ### Database
 
 Create a local development database:
@@ -137,7 +142,7 @@ legitimately report.
 | GET    | `/api/v1/devices/{device_id}`           | Get one device (404 if not found)      |
 | GET    | `/api/v1/devices/{device_id}/telemetry` | Telemetry history, newest first, paginated (`limit`, `offset`) |
 | GET    | `/api/v1/telemetry/latest`              | Latest reading for each device         |
-
+| GET    | `/api/v1/devices/{device_id}/anomalies` | Anomaly results for a device (404 if not found) |
 Telemetry history pagination: `limit` (1-500, default 50), `offset`
 (>= 0, default 0). Invalid values return `422`.
 
@@ -181,6 +186,65 @@ Every stage fails safely and independently:
   `{"status": "degraded", "database": "unreachable"}` if PostgreSQL
   can't be reached — the endpoint itself never crashes even when the
   database is down.
+
+## Anomaly Detection
+
+After each telemetry reading is stored, the backend re-analyzes that
+device's most recent readings (a sliding window, default 100) for
+anomalies in a background thread, using the `ai/` package's
+Isolation Forest model (`ai/README.md` covers why Isolation Forest,
+input features, and its documented limitations — read that first).
+Telemetry stored
+|
+v
+Background thread: fetch recent window -> preprocess -> fit + predict
+|
+v
+Skip readings already analyzed (unique per telemetry row)
+|
+v
+Persist new results -> anomaly_results table
+
+
+This does not block MQTT ingestion — the next telemetry message is
+processed immediately regardless of how long analysis takes.
+
+### Anomaly Schema
+
+```json
+{
+  "device_id": "simulator_001",
+  "timestamp": "2026-08-18T01:10:35.439344+00:00",
+  "is_anomaly": false,
+  "anomaly_score": -0.0369
+}
+```
+
+`anomaly_score`: higher = more anomalous. `is_anomaly`: whether the
+model's threshold flagged this reading.
+
+### Database Schema (Anomaly Results)
+
+- `anomaly_results`: `id` (PK), `telemetry_pk` (FK -> `telemetry.id`,
+  unique — one result per reading), `is_anomaly`, `anomaly_score`,
+  `created_at`
+
+### Known Limitations of This Integration
+
+These are current, real limitations, not hedging:
+
+- **Once a reading is scored, its result is permanent.** Later calls
+  train on a different, shifted window and could in principle score
+  the same reading differently — the first score is kept, not
+  updated. There is no re-scoring or versioning yet.
+- **Background threads are fire-and-forget**, not a real task queue.
+  If the backend restarts mid-analysis, that analysis is simply lost
+  (not retried) — acceptable at this stage, but not production-grade
+  background processing.
+- All limitations documented in `ai/README.md` (no labeled ground
+  truth, guessed contamination rate, no persisted/versioned model)
+  apply here too, since this integration reuses that same model
+  unchanged.
 
 ## Running Tests
 

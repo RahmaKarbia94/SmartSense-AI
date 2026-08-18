@@ -5,6 +5,7 @@ import { TelemetryHistory } from "../components/TelemetryHistory";
 import { TelemetryLineChart } from "../components/TelemetryLineChart";
 import { TimeRangeSelector } from "../components/TimeRangeSelector";
 import { SummaryCard } from "../components/SummaryCard";
+import { AnomaliesSection } from "../components/AnomaliesSection";
 import type { Device, Telemetry } from "../types";
 
 export function DeviceDetailsPage() {
@@ -107,6 +108,9 @@ export function DeviceDetailsPage() {
 
       <h3>History</h3>
       <TelemetryHistory readings={readings} />
+
+      <h3>Anomaly Detection</h3>
+      <AnomaliesSection deviceId={device.device_id} readings={readings} />
     </div>
   );
 }

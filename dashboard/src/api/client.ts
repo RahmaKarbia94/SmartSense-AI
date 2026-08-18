@@ -1,4 +1,4 @@
-import type { Device, Telemetry } from "../types";
+import type { AnomalyResult, Device, Telemetry } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
@@ -34,4 +34,9 @@ export function getDeviceTelemetry(
 
 export function getLatestTelemetry(): Promise<Telemetry[]> {
   return request<Telemetry[]>("/api/v1/telemetry/latest");
+}
+
+
+export function getDeviceAnomalies(deviceId: string): Promise<AnomalyResult[]> {
+  return request<AnomalyResult[]>(`/api/v1/devices/${deviceId}/anomalies`);
 }

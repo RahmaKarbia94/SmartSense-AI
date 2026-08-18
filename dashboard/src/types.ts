@@ -11,3 +11,10 @@ export interface Telemetry {
   humidity: number;
   pressure: number;
 }
+
+export interface AnomalyResult {
+  device_id: string;
+  timestamp: string;
+  is_anomaly: boolean;
+  anomaly_score: number;
+}

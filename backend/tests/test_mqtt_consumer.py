@@ -47,3 +47,14 @@ def test_on_message_missing_field_does_not_call_service(monkeypatch):
     mqtt_consumer._on_message(MagicMock(), None, _make_message(payload))
 
     assert received == []
+
+
+def test_on_message_non_dict_json_does_not_crash(monkeypatch):
+    received = []
+    monkeypatch.setattr(
+        mqtt_consumer, "process_telemetry", lambda reading: received.append(reading)
+    )
+
+    mqtt_consumer._on_message(MagicMock(), None, _make_message(b"42"))
+
+    assert received == []

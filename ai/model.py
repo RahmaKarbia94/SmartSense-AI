@@ -1,7 +1,6 @@
 import logging
-
-import numpy as np
 import pandas as pd
+
 from sklearn.ensemble import IsolationForest
 
 from config import CONTAMINATION, RANDOM_STATE, MIN_SAMPLES_FOR_TRAINING

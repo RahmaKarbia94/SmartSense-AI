@@ -87,3 +87,29 @@ def test_get_anomalies_returns_results_for_device(db_session):
 def test_get_anomalies_unknown_device_returns_none(db_session):
     results = get_anomalies(db_session, "unknown_device")
     assert results is None
+def test_analyze_and_store_handles_db_failure_when_fetching_telemetry(db_session, monkeypatch):
+    from app.services import anomaly_service
+
+    def broken_fetch(*args, **kwargs):
+        raise Exception("connection refused")
+
+    monkeypatch.setattr(anomaly_service, "get_telemetry_for_device", broken_fetch)
+
+    # Should not raise.
+    analyze_and_store(db_session, device_pk=1, device_id="simulator_001", window=20)
+
+def test_save_anomaly_result_handles_concurrent_duplicate_insert(db_session):
+    from app.repositories.anomaly_repository import save_anomaly_result
+
+    first = save_anomaly_result(db_session, telemetry_pk=1, is_anomaly=False, anomaly_score=-0.05)
+    db_session.commit()
+    assert first is not None
+
+    # Simulate a second, concurrent analysis pass landing on the same
+    # telemetry row (e.g. two overlapping windows racing each other).
+    second = save_anomaly_result(db_session, telemetry_pk=1, is_anomaly=True, anomaly_score=0.5)
+    db_session.commit()
+
+    assert second is None
+    stored = db_session.query(AnomalyResult).filter_by(telemetry_pk=1).all()
+    assert len(stored) == 1

@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from pydantic import ValidationError
 
 from app.schemas.telemetry import TelemetryReading
@@ -46,6 +46,7 @@ def test_empty_device_id_raises():
             humidity=52.18,
             pressure=1014.27,
         )
+
 
 def test_temperature_out_of_range_raises():
     with pytest.raises(ValidationError):
@@ -99,4 +100,15 @@ def test_non_utc_timezone_raises():
             temperature=25.34,
             humidity=52.18,
             pressure=1014.27,
-        )        
+        )
+
+
+def test_device_id_too_long_raises():
+    with pytest.raises(ValidationError):
+        TelemetryReading(
+            device_id="x" * 200,
+            timestamp="2026-08-12T23:00:00+00:00",
+            temperature=25.34,
+            humidity=52.18,
+            pressure=1014.27,
+        )

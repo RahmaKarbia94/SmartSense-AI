@@ -40,12 +40,19 @@ def _on_message(client, userdata, message):
         logger.error("Invalid JSON on topic %s: %s", message.topic, e)
         return
 
+    if not isinstance(data, dict):
+        logger.error(
+            "Telemetry payload on topic %s is not a JSON object: %s",
+            message.topic, type(data).__name__,
+        )
+        return
+
     try:
         reading = TelemetryReading(**data)
     except ValidationError as e:
         logger.error("Invalid telemetry payload on topic %s: %s", message.topic, e)
         return
-
+    
     process_telemetry(reading)
 
 

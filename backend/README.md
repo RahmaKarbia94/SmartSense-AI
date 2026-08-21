@@ -55,7 +55,8 @@ loaded automatically from `.env` via `python-dotenv`):
 | `MQTT_HOST`      | `localhost`                          | MQTT broker hostname                            |
 | `MQTT_PORT`      | `1883`                               | MQTT broker port                                |
 | `MQTT_TOPIC`     | `smartsense/devices/+/telemetry`     | Wildcard subscription — matches any device_id   |
-| `MQTT_CLIENT_ID` | `smartsense_backend_subscriber`      | MQTT client ID                                  |
+| `MQTT_CLIENT_ID` | `smartsense_backend_subscriber`      | MQTT client ID     |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:5173`        | Comma-separated list of origins allowed to call the API from a browser |
 
 The `+` wildcard in `MQTT_TOPIC` matches any single topic level, so the
 backend receives telemetry from any device (e.g. `simulator_001`,
@@ -108,9 +109,9 @@ created for repeated readings from the same device).
   "pressure": 1014.27
 }
 ```
-
 All fields are required. Validation rules (`app/schemas/telemetry.py`):
 
+- `device_id` — non-empty string, maximum 100 characters.
 - `timestamp` — valid ISO 8601 datetime, **must be UTC** (a naive
   datetime or a non-UTC offset like `+02:00` is rejected).
 - `temperature` — numeric, must be between -50.0 and 60.0 °C.

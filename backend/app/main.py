@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.api.v1.devices import router as devices_router
 from app.api.v1.telemetry import router as telemetry_router
+from app.config import CORS_ALLOWED_ORIGINS
 from app.services.mqtt_consumer import create_consumer, stop_consumer
 
 logging.basicConfig(
@@ -34,7 +35,7 @@ app = FastAPI(title="SmartSense AI Backend", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_methods=["GET"],
     allow_headers=["*"],
 )

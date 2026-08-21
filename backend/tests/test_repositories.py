@@ -48,7 +48,7 @@ def test_insert_telemetry_stores_correct_values(db_session):
         humidity=52.18,
         pressure=1014.27,
     )
-    telemetry = insert_telemetry(db_session, reading, device_pk=device.id)
+    insert_telemetry(db_session, reading, device_pk=device.id)
     db_session.commit()
 
     stored = db_session.query(Telemetry).first()

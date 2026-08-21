@@ -45,7 +45,12 @@ export function TelemetryLineChart({
           <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
           <XAxis dataKey="timestamp" tick={{ fontSize: 12 }} />
           <YAxis tick={{ fontSize: 12 }} />
-          <Tooltip formatter={(value: number) => [`${value} ${unit}`, label]} />
+          <Tooltip
+            formatter={(value) => [
+            typeof value === "number" ? `${value} ${unit}` : "—",
+            label,
+            ]}
+          />
           <Line
             type="monotone"
             dataKey="value"

@@ -10,11 +10,12 @@ from app.repositories.telemetry_repository import get_telemetry_for_device
 from app.repositories.anomaly_repository import (
     save_anomaly_result,
     get_already_analyzed_telemetry_ids,
+    get_anomalies_for_device,
 )
-logger = logging.getLogger(__name__)
-from app.repositories.anomaly_repository import get_anomalies_for_device
 from app.repositories.device_repository import get_device_by_device_id
 from app.schemas.anomaly import AnomalyResultResponse
+
+logger = logging.getLogger(__name__)
 
 
 def get_anomalies(db: Session, device_id: str) -> list[AnomalyResultResponse] | None:
@@ -33,13 +34,22 @@ def get_anomalies(db: Session, device_id: str) -> list[AnomalyResultResponse] | 
         for result, timestamp in rows
     ]
 
+
 def analyze_and_store(db: Session, device_pk: int, device_id: str, window: int = 100) -> None:
     """
     Re-analyze a device's recent telemetry window for anomalies and
     persist the results. Trains a fresh model on the window each call
     (see ai/README.md for why, and its limitations).
     """
-    readings = get_telemetry_for_device(db, device_pk, limit=window, offset=0)
+    try:
+        readings = get_telemetry_for_device(db, device_pk, limit=window, offset=0)
+    except Exception as e:
+        logger.error(
+            "Failed to fetch telemetry for anomaly analysis, device=%s: %s",
+            device_id, e,
+        )
+        return
+
     if not readings:
         return
 
@@ -83,13 +93,14 @@ def analyze_and_store(db: Session, device_pk: int, device_id: str, window: int =
             tid = int(telemetry_ids.loc[idx])
             if tid in already_analyzed:
                 continue
-            save_anomaly_result(
+            saved = save_anomaly_result(
                 db,
                 telemetry_pk=tid,
                 is_anomaly=bool(predictions.loc[idx, "is_anomaly"]),
                 anomaly_score=float(predictions.loc[idx, "anomaly_score"]),
             )
-            new_count += 1
+            if saved is not None:
+                new_count += 1
         db.commit()
         logger.info(
             "Stored %d new anomaly result(s) for device=%s (%d already analyzed, skipped)",
@@ -100,5 +111,3 @@ def analyze_and_store(db: Session, device_pk: int, device_id: str, window: int =
         logger.error(
             "Failed to persist anomaly results for device=%s: %s", device_id, e
         )
-
-

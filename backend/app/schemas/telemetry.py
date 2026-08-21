@@ -11,7 +11,7 @@ PRESSURE_MAX = 1100.0
 
 
 class TelemetryReading(BaseModel):
-    device_id: str = Field(min_length=1)
+    device_id: str = Field(min_length=1, max_length=100)
     timestamp: datetime
     temperature: float
     humidity: float
